@@ -13,8 +13,9 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 set(PICO_BOARD pico CACHE STRING "Board type")
+add_compile_options(-DFEATURE_A2F_PDMA=1)
 
-set(PROJECT_NAME A2retroNET)
+set(PROJECT_NAME A2retroNET_Cache_v1.1b)
 
 cmake_minimum_required(VERSION 3.12)
 include(pico_sdk_import.cmake)
@@ -79,7 +80,7 @@ FetchContent_MakeAvailable(a2pico)
 
 set_source_files_properties(incbin.S OBJECT_DEPENDS firmware.rom)
 add_custom_command(
-        COMMAND cl65 -t apple2 -C apple2-asm.cfg
+        COMMAND cl65 -l ${CMAKE_CURRENT_BINARY_DIR}/firmware_listing.asm -t apple2 -C apple2-asm.cfg
                         ${CMAKE_CURRENT_SOURCE_DIR}/6502/SSC.S
                      -o ${CMAKE_CURRENT_BINARY_DIR}/firmware.rom
         MAIN_DEPENDENCY 6502/SSC.S
@@ -94,6 +95,7 @@ target_sources(${PROJECT_NAME} PRIVATE
         main.c
         board.c
         config.c
+        block_cache.c
         hdd.c
         sp.c
         diskio.c

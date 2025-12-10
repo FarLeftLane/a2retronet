@@ -50,7 +50,7 @@ PDRD    ; EXECUTE AND GET RETURN CODE
         BNE PDDONE      ; ERROR?
 
         ; READ BLOCK
-        JSR RDBLOCK
+        JSR PDRDBLOCK
         BEQ PDOKAY      ; ALWAYS
 
 PDWR    ; WRITE BLOCK
@@ -83,13 +83,14 @@ STATUS  ; EXECUTE AND GET STATUS
         JMP RETURN
 
 READBL  ; EXECUTE AND GET STATUS
+        LDY #$02        ; OFFSET OF BUFFER ADDRESS
+        JSR SETADDR
+        JSR PDMAADDR    ; Setup for PDMA
         JSR GETSTS
         BNE RETURN      ; ERROR?
 
         ; READ BLOCK
-        LDY #$02        ; OFFSET OF BUFFER ADDRESS
-        JSR SETADDR
-        JSR RDBLOCK
+        JSR SPRDBLOCK   ; SPRDBLOCK
         JMP RETURN
 
 WRITEBL ; WRITE BLOCK
@@ -121,6 +122,7 @@ CLOSE   ; EXECUTE AND GET STATUS
         JMP RETURN
 
 READ    ; EXECUTE AND GET STATUS
+        JSR PDMAADDR
         JSR GETSTS
         BNE RETURN      ; ERROR?
 
@@ -174,6 +176,7 @@ PRODOS: ; WRITE PARAMETERS
         STA DATA
         LDA BLOCKH
         STA DATA
+        JSR PDMAADDR
 
         ; DISPATCH COMMAND
         LDA #>$C800
@@ -312,6 +315,13 @@ RDMORE  LDA DATA
         BNE RDMORE
 RDDONE  RTS
 
+PDMAADDR
+        LDA ADDRL       ; PSEUDO DMA ADDRESS
+        STA PSDMAL	
+        LDA ADDRH
+        STA PSDMAH
+        RTS
+
 WRBUF   ; WRITE BUFFER
         LDY #$00
         LDX SIZEH
@@ -328,6 +338,16 @@ WRMORE  LDA (ADDRL),Y
         DEX
         BNE WRMORE
 WRDONE  RTS
+
+PDRDBLOCK ; READ 512-BYTE BLOCK
+        JSR PDMA        ; Jump to the pseudo DMA dynamically generated code
+        LDY #$00        ; ProDOS needs Z cleared
+        RTS
+
+SPRDBLOCK ; READ 512-BYTE BLOCK
+        JSR PDMA        ; Jump to the pseudo DMA dynamically generated code
+        LDY #$00        ; ProDOS needs Z cleared
+        RTS
 
 RDBLOCK ; READ 512-BYTE BLOCK
         LDY #$00

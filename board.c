@@ -59,6 +59,12 @@ static volatile uint32_t ser_control;
 static volatile uint8_t ser_mask;
 static volatile uint8_t output_mask;
 
+volatile uint8_t sp_address_low = 0;
+volatile uint8_t sp_address_high = 0;
+
+uint8_t *firmware_map[64];                      //  This is used to break the 16K firnmware region into 64 x 256 byte pages
+uint8_t firmware_code_buffer[4096];             //  Buffer for code gen (smartport reads)
+
 static void __time_critical_func(reset)(bool asserted) {
     static absolute_time_t assert_time;
 
@@ -243,6 +249,22 @@ static void __time_critical_func(sp_control_put)(uint32_t data) {
     sp_control = data;
 }
 
+static void __time_critical_func(sp_address_low_put)(uint32_t data) {
+    if (!active) {
+        return;
+    }
+    //  Low byte of address
+    sp_address_low = data;
+}
+
+static void __time_critical_func(sp_address_high_put)(uint32_t data) {
+    if (!active) {
+        return;
+    }
+    //  High byte of address
+    sp_address_high = data;
+}
+
 static void __time_critical_func(basic_enter_put)(uint32_t data) {
     if (!active) {
         return;
@@ -290,13 +312,25 @@ static void __time_critical_func(deactivate_put)(uint32_t data) {
 }
 
 static const void __not_in_flash("cffx_put")(*cffx_put[])(uint32_t) = {
-    sp_data_put,      sp_control_put,  nop_put,         nop_put,
-    nop_put,          nop_put,         nop_put,         nop_put,
-    nop_put,          basic_enter_put, basic_leave_put, iostrb_bank0_put,     
-    iostrb_bank1_put, iosel_bank0_put, iosel_bank1_put, deactivate_put
+    sp_data_put,      		sp_control_put,  nop_put,         sp_address_low_put,
+    sp_address_high_put,	nop_put,         nop_put,         nop_put,
+    nop_put,          		basic_enter_put, basic_leave_put, iostrb_bank0_put,     
+    iostrb_bank1_put, 		iosel_bank0_put, iosel_bank1_put, deactivate_put
 };
 
+void __time_critical_func(build_firmware_map)(void) {
+    for (int i = 0; i < 64; i++) {
+        firmware_map[i] = (uint8_t *)(&(firmware[i << 8]));
+    }
+
+    firmware_code_buffer[0] = 0x60;  //  RTS
+
+    firmware_map[43] = firmware_code_buffer;                    //  43 == 0xCB00
+    firmware_map[43+1] = &(firmware_code_buffer[256]);          //  44 == 0xCC00
+}
+
 void __time_critical_func(board)(void) {
+    build_firmware_map();
 
     a2pico_init(pio0);
 
@@ -315,7 +349,19 @@ void __time_critical_func(board)(void) {
             } else if (!io) {
                 devsel_get[addr & 0xF]();
             } else if (!strb || active) {
-                a2pico_putdata(pio0, firmware[offset | addr]);
+                    //  We break up the firmware space into 64 x 256 byte chuncks
+                    uint32_t fw_addr = offset | addr;
+                    uint32_t fw_addr_hi = (fw_addr & 0x3F00) >> 8;
+                    uint8_t *fw_bank = firmware_map[fw_addr_hi];
+                    uint32_t fw_addr_lo = fw_addr & 0x00FF;
+
+                    a2pico_putdata(pio0, fw_bank[fw_addr_lo]);
+
+                    if (fw_addr == 0x2BFF) {
+                        //  Move to the next page
+                        firmware_map[43] += 256;
+                    }
+
             }
         } else {
             uint32_t data = a2pico_getdata(pio0);

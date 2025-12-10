@@ -176,6 +176,10 @@ SIZEH   EQU $47
 ;;;;;;;;;;;;;;;;;;;;;;;
 DATA    EQU $CFF0       ; SMARTPORT DATA REGISTER
 CTRL    EQU $CFF1       ; SMARTPORT CONTROL REGISTER
+
+PSDMAL  EQU $CFF3       ; DMA LOW ADDRESS 
+PSDMAH  EQU $CFF4       ; DMA LOW ADDRESS 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ; BASIC MODE ADDRESSES ;
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -186,6 +190,8 @@ BLEAVE  EQU $CFFA       ; LEAVE A2RETRONET BASIC MODE
 ;;;;;;;;;;;;;;;;;;;;;
 BANKSSC EQU $CFFB       ; EXPANSION ROM BANK FOR SSC
 BANKSP  EQU $CFFC       ; EXPANSION ROM BANK FOR SP
+
+PDMA    EQU $CB00       ; COMPILED CODE FOR READS
 
 .REPEAT 4,_BANK
     .DEFINE BANK _BANK
@@ -225,7 +231,7 @@ BANKSP  EQU $CFFC       ; EXPANSION ROM BANK FOR SP
         .IF BANK <> 2
             .SCOPE
         .ENDIF
-            .INCLUDE "SMARTPORT.S"
+            .INCLUDE "SMARTPORT.S"      ; CHANGE TO SMARTPORT_POLL.S (FEATURE_A2F_PDMA=0)
         .IF BANK <> 2
             .ENDSCOPE
         .ENDIF

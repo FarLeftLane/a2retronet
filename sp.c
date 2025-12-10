@@ -31,6 +31,7 @@ SOFTWARE.
 #include "board.h"
 #include "config.h"
 #include "hdd.h"
+#include "diskio.h"
 
 #include "sp.h"
 
@@ -92,12 +93,111 @@ static uint8_t unit_to_drive(uint8_t unit) {
 }
 
 void sp_init(void) {
+    disk_init();            //  Settup the cache
+
     hdd_init();
 
 #ifdef PICO_DEFAULT_LED_PIN
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 #endif
+}
+
+//  Compiled code for read transfers
+uint16_t sp_buffer_addr = 0;
+uint16_t pd_buffer_addr = 0;
+
+extern uint8_t firmware_code_buffer[];      //  Buffer for code gen (smartport reads)
+extern uint8_t *firmware_map[];             //  This is used to break the 16K firnmware region into 64 x 256 byte pages
+extern uint8_t sp_address_low;
+extern uint8_t sp_address_high;
+
+//  Instructions
+#define INST_LDY        0xA0    //  + 1 byte imm
+#define INST_STY        0x8C    //  + 2 byte addr
+#define INST_INY        0xC8    //  
+#define INST_RTS        0x60    //
+#define INST_NOP        0xEA    
+#define INST_JMP        0x4C    //  + 2 byte addr
+#define INST_JMP_SIZE   3       //  1 + 2 byte addr
+
+#define INST_BASE       0xCB00
+#define INST_BASE_LO    0x00
+#define INST_BASE_HI    0xCB
+
+#define INST_PAGE_BITS  8
+#define INST_PAGE_SIZE  (1L << INST_PAGE_BITS)
+
+
+int __time_critical_func(check_buffer_wrap)(int instruction_index, int next_instruction_size) {
+    int current_page = instruction_index >> INST_PAGE_BITS;                     //  Divide by INST_PAGE_SIZE (256)
+    int remaining = ((current_page + 1) << INST_PAGE_BITS) - (instruction_index + next_instruction_size + INST_JMP_SIZE);
+
+    if (remaining >= 0) {
+        return instruction_index;
+    } else {
+        int nop_index_end = (((current_page + 1) << INST_PAGE_BITS) - INST_JMP_SIZE);
+
+        //  fill in the last of this page
+        while (instruction_index < nop_index_end) {
+            firmware_code_buffer[instruction_index++] = INST_NOP;
+        }
+
+        // The end of the buffer needs to jump to the begining to trigger a page switch
+        firmware_code_buffer[instruction_index++] = INST_JMP;
+        firmware_code_buffer[instruction_index++] = INST_BASE_LO;
+        firmware_code_buffer[instruction_index++] = INST_BASE_HI;
+    }
+
+    return instruction_index;
+}
+
+
+void __time_critical_func(sp_compile_buffer)(uint16_t a2_buffer_addr, uint8_t *in_buffer) {
+    int i = 0;
+    int current_page = 0;
+
+    //  Reset the firmware pointer
+    firmware_map[43] = firmware_code_buffer;
+    uint8_t last_value = 0;
+
+    for (int buffer_index = 0; buffer_index < 512; buffer_index++) {
+        uint8_t addr_lo = a2_buffer_addr & 0xFF;
+        uint8_t addr_hi = (a2_buffer_addr >> 8) & 0xFF;
+
+        uint8_t value = in_buffer[buffer_index];
+        if ((last_value != value) || (buffer_index == 0)) {
+            //  Emit a LDY + STY
+
+            //  Add a JMP if needed, do a quick check to see if we are close
+            if ((i % INST_PAGE_SIZE) >= (INST_PAGE_SIZE - (5 + INST_JMP_SIZE)))      //  5 is next inst size
+                i = check_buffer_wrap(i, 5);
+
+            firmware_code_buffer[i++] = INST_LDY;
+            firmware_code_buffer[i++] = in_buffer[buffer_index];
+
+            firmware_code_buffer[i++] = INST_STY;
+            firmware_code_buffer[i++] = addr_lo;
+            firmware_code_buffer[i++] = addr_hi;
+        } else {
+            //  Add a JMP if needed, do a quick check to see if we are close
+            if ((i % INST_PAGE_SIZE) >= (INST_PAGE_SIZE - (3 + INST_JMP_SIZE)))      //  3 is next inst size
+                i = check_buffer_wrap(i, 3);
+
+            //  Emit a STY
+            firmware_code_buffer[i++] = INST_STY;
+            firmware_code_buffer[i++] = addr_lo;
+            firmware_code_buffer[i++] = addr_hi;
+        }
+
+        last_value = value;
+
+        a2_buffer_addr++;
+    }
+
+    //  Terminate with an RTS
+    i = check_buffer_wrap(i, 1);
+    firmware_code_buffer[i++] = INST_RTS;
 }
 
 void __time_critical_func(sp_reset)(void) {
@@ -163,6 +263,7 @@ static uint8_t sp_writeblk(uint8_t *params, const uint8_t *buffer) {
 void sp_task(void) {
 
     if (sp_control == CONTROL_NONE || sp_control == CONTROL_DONE) {
+        disk_task();
         return;
     }
 
@@ -189,9 +290,18 @@ void sp_task(void) {
                                                             (uint8_t*)&sp_buffer[PRODOS_O_BUFFER]);
                     break;
                 case PRODOS_CMD_READ:
+                    uint16_t a2_buffer_address = (uint16_t)(((uint16_t)sp_address_high << 8) | sp_address_low);     //  SMARTPORT.S fills this in
+                    pd_buffer_addr = a2_buffer_address;
+
                     sp_buffer[PRODOS_O_RETVAL] = hdd_read(unit_to_drive(sp_buffer[PRODOS_I_UNIT]),
                                                           *(uint16_t*)&sp_buffer[PRODOS_I_BLOCK],
                                                           (uint8_t*)&sp_buffer[PRODOS_O_BUFFER]);
+#if FEATURE_A2F_PDMA
+                    sp_compile_buffer(a2_buffer_address, (uint8_t*)&sp_buffer[PRODOS_O_BUFFER]);
+#endif
+                    //  Reset the address
+                    sp_address_low = 0;
+                    sp_address_high = 0;
                     break;
                 case PRODOS_CMD_WRITE:
                     sp_buffer[PRODOS_O_RETVAL] = hdd_write(unit_to_drive(sp_buffer[PRODOS_I_UNIT]),
@@ -210,8 +320,17 @@ void sp_task(void) {
                     break;
                 case SP_CMD_READBLK:
 //                    printf("SP CmdReadBlock(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
+                    uint16_t a2_buffer_address = (uint16_t)(((uint16_t)sp_address_high << 8) | sp_address_low);     //  SMARTPORT.S fills this in
+                    pd_buffer_addr = a2_buffer_address;
+
                     sp_buffer[SP_O_RETVAL] = sp_readblk((uint8_t*)&sp_buffer[SP_I_PARAMS],
                                                         (uint8_t*)&sp_buffer[SP_O_BUFFER]);
+#if FEATURE_A2F_PDMA
+                    sp_compile_buffer(a2_buffer_address, (uint8_t*)&sp_buffer[SP_O_BUFFER]);
+#endif
+                    //  Reset the address
+                    sp_address_low = 0;
+                    sp_address_high = 0;
                     break;
                 case SP_CMD_WRITEBLK:
 //                    printf("SP CmdWriteBlock(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);

@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#include "ff.h"
+
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;
 
@@ -25,11 +27,15 @@ typedef enum {
 /*---------------------------------------*/
 /* Prototypes for disk control functions */
 
+void disk_init(void);
+void disk_task(void);
 
 DSTATUS disk_initialize (BYTE pdrv);
 DSTATUS disk_status (BYTE pdrv);
 DRESULT disk_read (BYTE pdrv, BYTE* buff, LBA_t sector, UINT count);
 DRESULT disk_write (BYTE pdrv, const BYTE* buff, LBA_t sector, UINT count);
+DRESULT disk_read_no_cache (BYTE pdrv, BYTE* buff, LBA_t sector, UINT count);
+DRESULT disk_write_no_cache (BYTE pdrv, const BYTE* buff, LBA_t sector, UINT count);
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
 
 
