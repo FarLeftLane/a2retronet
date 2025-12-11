@@ -15,11 +15,10 @@ endif()
 set(PICO_BOARD pico CACHE STRING "Board type")
 add_compile_options(-DFEATURE_A2F_PDMA=1)
 
-set(PROJECT_NAME A2retroNET_Cache_v1.1b)
-
 cmake_minimum_required(VERSION 3.12)
 include(pico_sdk_import.cmake)
-project(${PROJECT_NAME} C CXX ASM)
+
+project(A2retroNET_Cache_v1.2b C CXX ASM)
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME})

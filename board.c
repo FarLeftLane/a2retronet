@@ -349,19 +349,11 @@ void __time_critical_func(board)(void) {
             } else if (!io) {
                 devsel_get[addr & 0xF]();
             } else if (!strb || active) {
-                    //  We break up the firmware space into 64 x 256 byte chuncks
-                    uint32_t fw_addr = offset | addr;
-                    uint32_t fw_addr_hi = (fw_addr & 0x3F00) >> 8;
-                    uint8_t *fw_bank = firmware_map[fw_addr_hi];
-                    uint32_t fw_addr_lo = fw_addr & 0x00FF;
+                uint32_t fw_addr = offset | addr;
+                a2pico_putdata(pio0, firmware_map[(fw_addr & 0x3F00) >> 8][fw_addr & 0x00FF]);
 
-                    a2pico_putdata(pio0, fw_bank[fw_addr_lo]);
-
-                    if (fw_addr == 0x2BFF) {
-                        //  Move to the next page
-                        firmware_map[43] += 256;
-                    }
-
+                if (fw_addr == 0x2BFF)
+                    firmware_map[43] += 256;    //  Move to the next page
             }
         } else {
             uint32_t data = a2pico_getdata(pio0);
