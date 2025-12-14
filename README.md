@@ -1,6 +1,6 @@
 # A2retroNET
 
-# This is a beta level fork.  Use at your own risk.  Backup your SD card before testing.  
+# This is a beta level fork.  Use at your own risk.  Backup your SD card before testing.  See the Releases folder for more info.
 
 This project is based on [A2Pico](https://github.com/oliverschmidt/a2pico).
 
