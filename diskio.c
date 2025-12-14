@@ -12,6 +12,7 @@
 #include <glue.h>       // Declarations of SD card functions
 #include "usb_diskio.h" // Declarations of USB MSD functions
 #include <stddef.h>
+#include <stdbool.h>    //  For bool
 
 #define USE_BLOCK_CACHE             1
 #define USE_BLOCK_CACHE_READ_AHEAD  1       //  USE_BLOCK_CACHE must be 1 to use

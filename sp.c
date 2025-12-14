@@ -308,10 +308,15 @@ void sp_task(void) {
                                                            *(uint16_t*)&sp_buffer[PRODOS_I_BLOCK],
                                                            (uint8_t*)&sp_buffer[PRODOS_I_BUFFER]);
                     break;
+                default:
+                    printf("SP NO PD COMMAND\n");
+                    break;
             }
             break;
 
         case CONTROL_SP:
+//            printf("SP Cmd(Type=$%02X,SP_I_CMD=$%02X)\n", sp_control, sp_buffer[SP_I_CMD]);
+
             switch (sp_buffer[SP_I_CMD]) {
                 case SP_CMD_STATUS:
 //                    printf("SP CmdStatus(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
@@ -323,7 +328,8 @@ void sp_task(void) {
                     uint16_t a2_buffer_address = (uint16_t)(((uint16_t)sp_address_high << 8) | sp_address_low);     //  SMARTPORT.S fills this in
                     pd_buffer_addr = a2_buffer_address;
 
-                    sp_buffer[SP_O_RETVAL] = sp_readblk((uint8_t*)&sp_buffer[SP_I_PARAMS],
+                    sp_buffer[SP_O_RETVAL] = hdd_read(sp_buffer[SP_I_PARAMS + SP_PARAM_UNIT] - 1, 
+                                                        *(uint16_t*)&sp_buffer[SP_I_PARAMS + SP_PARAM_BLOCK], 
                                                         (uint8_t*)&sp_buffer[SP_O_BUFFER]);
 #if FEATURE_A2F_PDMA
                     sp_compile_buffer(a2_buffer_address, (uint8_t*)&sp_buffer[SP_O_BUFFER]);
@@ -334,8 +340,10 @@ void sp_task(void) {
                     break;
                 case SP_CMD_WRITEBLK:
 //                    printf("SP CmdWriteBlock(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
-                    sp_buffer[SP_O_RETVAL] = sp_writeblk((uint8_t*)&sp_buffer[SP_I_PARAMS],
-                                                         (uint8_t*)&sp_buffer[SP_I_BUFFER]);
+
+                    sp_buffer[SP_O_RETVAL] = hdd_write(sp_buffer[SP_I_PARAMS + SP_PARAM_UNIT] - 1, 
+                                                        *(uint16_t*)&sp_buffer[SP_I_PARAMS + SP_PARAM_BLOCK], 
+                                                        (uint8_t*)&sp_buffer[SP_I_BUFFER]);
                     break;
                 case SP_CMD_FORMAT:
                     printf("SP CmdFormat(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
@@ -364,6 +372,9 @@ void sp_task(void) {
                 case SP_CMD_WRITE:
                     printf("SP CmdWrite(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
                     sp_buffer[SP_O_RETVAL] = SP_BADCMD;
+                    break;
+                default:
+                    printf("SP NO SP COMMAND\n");
                     break;
             }
             break;
