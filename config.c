@@ -33,6 +33,7 @@ SOFTWARE.
 
 #include "sp.h"
 #include "hdd.h"
+#include "diskio.h"
 #include "main.h"
 
 #include "config.h"
@@ -161,6 +162,7 @@ static void get_config(void) {
 }
 
 static void put_config(void) {
+    disk_flush();
     hdd_reset();
 
     FIL text;

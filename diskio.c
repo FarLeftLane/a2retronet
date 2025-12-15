@@ -60,7 +60,7 @@ void disk_task(void) {
 #endif
 
     if (more_work == true) {
-        block_cache_flush(false);       //  If we have time, flush one block from the cache
+        block_cache_flush(false, false);       //  If we have time, flush one block from the cache
         more_work = false;
     }
 #endif
@@ -97,7 +97,7 @@ DSTATUS disk_initialize(
 #if USE_BLOCK_CACHE
     
     //  Make sure the cache is flushed (ignores errors???)
-    block_cache_flush(true);
+    block_cache_flush(true, true);
 #endif
 
     switch (pdrv) {
@@ -132,7 +132,7 @@ DRESULT disk_read(
         result = block_cache_read_block(pdrv, sector, buff);
     }
     else {
-        block_cache_flush(true);
+        block_cache_flush(true, true);
         result = disk_read_no_cache(pdrv, buff, sector, count);
     }
 #else
@@ -190,7 +190,7 @@ DRESULT disk_write(
         result = block_cache_write_block(pdrv, sector, buff);
     }
     else {
-        block_cache_flush(true);
+        block_cache_flush(true, true);
         result = disk_write_no_cache(pdrv, buff, sector, count);
     }
 #else
@@ -234,7 +234,7 @@ DRESULT disk_ioctl(
 ) {
 #if USE_BLOCK_CACHE    
     //  Make sure the cache is flushed (ignores errors???)
-    block_cache_flush(true);
+    block_cache_flush(true, true);
 #endif
 
     switch (pdrv) {
@@ -249,4 +249,8 @@ DRESULT disk_ioctl(
         default:
             return RES_PARERR;
     }
+}
+
+DRESULT disk_flush(void){
+    return block_cache_flush(true, true);       //  Flush and invalidate the cache
 }

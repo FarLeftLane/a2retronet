@@ -38,7 +38,7 @@ extern DRESULT block_cache_read_block(BYTE pdrv, LBA_t sector, BYTE *out_data);
 
 extern DRESULT block_cache_write_block(BYTE pdrv, LBA_t sector, const BYTE *in_data);
 
-extern DRESULT block_cache_flush(bool flush_all);
+extern DRESULT block_cache_flush(bool flush_all, bool invalidate_all);
 
 extern void block_cache_print_stats(void);
 

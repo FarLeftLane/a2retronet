@@ -381,7 +381,7 @@ DRESULT block_cache_write_block(BYTE pdrv, LBA_t sector, const BYTE *in_data)
     return 0;
 }
 
-DRESULT block_cache_flush(bool flush_all)
+DRESULT block_cache_flush(bool flush_all, bool invalidate_all)
 {
     if (s_dirty_blocks == false)                    //  Optimization
         return RES_OK;
@@ -403,6 +403,9 @@ DRESULT block_cache_flush(bool flush_all)
             if (flush_all == false)
                 return RES_OK;                      //  Flush only one
         }
+
+        if (invalidate_all)                         //  Flush all of the cache entries
+            s_cache[i].valid = false;
     }
 
     s_dirty_blocks = false;                         //  Clear the flag

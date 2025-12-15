@@ -56,6 +56,7 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
     }
 
     // Avoid inconsistency in local FAT implementation
+    disk_flush();
     hdd_reset();
     config_reset();
 

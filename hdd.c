@@ -34,6 +34,7 @@ SOFTWARE.
 #include "sp.h"
 
 #include "hdd.h"
+#include "diskio.h"
 
 #define BLOCK_SIZE  512
 
@@ -128,6 +129,7 @@ void hdd_reset(void) {
 
 void hdd_mount_usb(bool mount) {
     // Make sure the upcoming new default drive is actually used
+    disk_flush();
     hdd_reset();
     config_reset();
 

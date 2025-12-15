@@ -37,6 +37,8 @@ DRESULT disk_write (BYTE pdrv, const BYTE* buff, LBA_t sector, UINT count);
 DRESULT disk_read_no_cache (BYTE pdrv, BYTE* buff, LBA_t sector, UINT count);
 DRESULT disk_write_no_cache (BYTE pdrv, const BYTE* buff, LBA_t sector, UINT count);
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
+DRESULT disk_flush(void);
+
 
 
 /* Disk Status Bits (DSTATUS) */
