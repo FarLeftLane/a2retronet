@@ -327,14 +327,10 @@ void sp_task(void) {
 //                    printf("SP CmdReadBlock(Device=$%02X)\n", sp_buffer[SP_I_PARAMS]);
                     uint16_t a2_buffer_address = (uint16_t)(((uint16_t)sp_address_high << 8) | sp_address_low);     //  SMARTPORT.S fills this in
                     pd_buffer_addr = a2_buffer_address;
-#if 1
-                    sp_buffer[SP_O_RETVAL] = sp_readblk((uint8_t*)&sp_buffer[SP_I_PARAMS],
-                                                        (uint8_t*)&sp_buffer[SP_O_BUFFER]);
-#else
+
                     sp_buffer[SP_O_RETVAL] = hdd_read(sp_buffer[SP_I_PARAMS + SP_PARAM_UNIT] - 1, 
                                                         *(uint16_t*)&sp_buffer[SP_I_PARAMS + SP_PARAM_BLOCK], 
                                                         (uint8_t*)&sp_buffer[SP_O_BUFFER]);
-#endif
 
 #if FEATURE_A2F_PDMA
                     sp_compile_buffer(a2_buffer_address, (uint8_t*)&sp_buffer[SP_O_BUFFER]);

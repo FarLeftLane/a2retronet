@@ -18,7 +18,7 @@ add_compile_options(-DFEATURE_A2F_PDMA=1)
 cmake_minimum_required(VERSION 3.12)
 include(pico_sdk_import.cmake)
 
-project(A2retroNET_Cache_v1.4b C CXX ASM)
+project(A2retroNET_Cache_v1.5b C CXX ASM)
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME})
