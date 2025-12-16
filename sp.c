@@ -107,11 +107,6 @@ void sp_init(void) {
 uint16_t sp_buffer_addr = 0;
 uint16_t pd_buffer_addr = 0;
 
-extern uint8_t firmware_code_buffer[];      //  Buffer for code gen (smartport reads)
-extern uint8_t *firmware_map[];             //  This is used to break the 16K firnmware region into 64 x 256 byte pages
-extern uint8_t sp_address_low;
-extern uint8_t sp_address_high;
-
 //  Instructions
 #define INST_LDY        0xA0    //  + 1 byte imm
 #define INST_STY        0x8C    //  + 2 byte addr
@@ -158,7 +153,9 @@ void __time_critical_func(sp_compile_buffer)(uint16_t a2_buffer_addr, uint8_t *i
     int current_page = 0;
 
     //  Reset the firmware pointer
-    firmware_map[43] = firmware_code_buffer;
+    firmware_map[SP_CODE_MAP1] = firmware_code_buffer;
+    firmware_map[SP_CODE_MAP2] = firmware_code_buffer;
+
     uint8_t last_value = 0;
 
     for (int buffer_index = 0; buffer_index < 512; buffer_index++) {

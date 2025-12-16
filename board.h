@@ -27,6 +27,15 @@ SOFTWARE.
 #ifndef _BOARD_H
 #define _BOARD_H
 
+#define SP_CODE_MAP1    (0x2B)  //  43
+#define SP_CODE_MAP2    (0x3B)  //  59
+
+extern volatile uint8_t firmware_code_buffer[];      //  Buffer for code gen (smartport reads)
+extern volatile uint8_t *firmware_map[];             //  This is used to break the 16K firnmware region into 64 x 256 byte pages
+extern volatile uint8_t sp_address_low;
+extern volatile uint8_t sp_address_high;
+
+
 void board(void);
 
 uint8_t board_slot(void);

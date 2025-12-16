@@ -4,14 +4,14 @@ This project is based on [A2Pico](https://github.com/oliverschmidt/a2pico).
 
 A2retroNET implements a SmartPort mass storage controller with (up to) eight drives. The (currently) only supported disk image format is a ProDOS block image of up to 32MB, typically with the file extensions `.hdv`, `.po` or `.2mg`. 
 
-## A2retroNET_Cache_v1.5b.uf2
+## A2retroNET_Cache_v1.6b.uf2
 
 This firmware is a test of a set of performance upgrades.  Block cache, read ahead, write behind and pseudo DMA.  
 
 
 To update your a2pico:
 
-Download the Firmware: Download the desired firmware file A2retroNET_Cache_v1.5b.uf2
+Download the Firmware: Download the desired firmware file A2retroNET_Cache_v1.6b.uf2
 
 # With your Apple II OFF:
 
